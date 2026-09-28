@@ -1,15 +1,34 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { useData } from "./DataContext";
 import { User, ShieldCheck, Briefcase, CheckCircle2, ArrowRight } from "lucide-react";
 
-const AshokaChakra = () => {
+const AshokaChakraAnimated = () => {
+  const [activeSpoke, setActiveSpoke] = useState(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(mediaQuery.matches);
+    const listener = (e) => setPrefersReducedMotion(e.matches);
+    mediaQuery.addEventListener("change", listener);
+    return () => mediaQuery.removeEventListener("change", listener);
+  }, []);
+
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+    const interval = setInterval(() => {
+      setActiveSpoke((prev) => (prev + 1) % 24);
+    }, 250);
+    return () => clearInterval(interval);
+  }, [prefersReducedMotion]);
+
   const spokes = Array.from({ length: 24 });
 
   return (
     <svg
       viewBox="0 0 200 200"
-      className="w-44 h-44 opacity-[0.12]"
+      className="w-44 h-44 opacity-80"
       xmlns="http://www.w3.org/2000/svg"
     >
       <circle
@@ -17,15 +36,19 @@ const AshokaChakra = () => {
         cy="100"
         r="88"
         fill="none"
-        stroke="#56748A"
+        stroke="#dfe6eb"
         strokeWidth="8"
       />
-      <circle cx="100" cy="100" r="4" fill="#56748A" />
+      <circle cx="100" cy="100" r="4" fill="#dfe6eb" />
       {spokes.map((_, index) => {
-        const angle = index * 15;
+        // -90 degrees offset so animation starts at top (12 o'clock)
+        const angle = (index * 15) - 90;
         const radians = (angle * Math.PI) / 180;
         const x2 = 100 + 82 * Math.cos(radians);
         const y2 = 100 + 82 * Math.sin(radians);
+        
+        const isActive = index === activeSpoke && !prefersReducedMotion;
+        
         return (
           <line
             key={index}
@@ -33,8 +56,9 @@ const AshokaChakra = () => {
             y1="100"
             x2={x2}
             y2={y2}
-            stroke="#56748A"
-            strokeWidth="2"
+            stroke={isActive ? "#063b5c" : "#dfe6eb"}
+            strokeWidth={isActive ? "4" : "2"}
+            style={{ transition: "stroke 250ms ease-in-out, stroke-width 250ms ease-in-out" }}
           />
         );
       })}
@@ -159,7 +183,7 @@ export default function Login({ onSelectPortal }) {
         <section className="relative w-full max-w-[880px] bg-white border border-[#dce4e9] rounded-xl shadow-md flex flex-col items-center justify-center overflow-hidden py-8 px-6 md:px-12">
           {/* Ashoka Chakra Background Watermark */}
           <div className="absolute right-[-2rem] top-[-2rem] md:right-8 md:top-8 pointer-events-none">
-            <AshokaChakra />
+            <AshokaChakraAnimated />
           </div>
 
           <div className="relative z-10 flex flex-col items-center text-center w-full max-w-lg">
