@@ -17,6 +17,7 @@ import {
   X,
   Shield,
   FileSpreadsheet,
+  ChevronDown,
 } from "lucide-react";
 
 export default function AdminDashboard({ onLogout }) {
@@ -116,45 +117,55 @@ export default function AdminDashboard({ onLogout }) {
       )}
 
       {/* ================= HEADER ================= */}
-      <header className="h-[76px] bg-[#053b5c] border-b-[3px] border-[#eb5405] flex items-center px-4 md:px-8 text-white shadow-md">
-        <div className="flex items-center gap-2 mr-6">
-          <span className="text-[#eb5405] text-[34px] font-bold leading-none">e</span>
-          <span className="text-[28px] font-bold ml-0.5">माप</span>
-          <span className="text-[10px] bg-[#eb5405] text-white font-bold px-2 py-0.5 rounded font-mono ml-2 tracking-wider">
-            ADMIN HQ
+      <header className="h-[70px] bg-[#053b5c] border-b-[2px] border-[#eb5405] flex items-center justify-between px-4 md:px-8 text-white shadow-md">
+        
+        {/* LEFT: Government Logo & Text */}
+        <div className="flex items-center gap-3 flex-1">
+          <img 
+            src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" 
+            alt="Emblem of India" 
+            className="w-8 h-10 object-contain filter invert brightness-0 contrast-200" 
+            style={{ filter: "brightness(0) invert(1)" }}
+          />
+          <span className="hidden sm:block text-[13px] font-bold tracking-wider uppercase leading-tight">
+            Government<br/>of India
           </span>
         </div>
 
-        <div className="hidden md:block">
-          <h1 className="text-[17px] font-semibold">State Legal Metrology Administration</h1>
-          <p className="text-[11px] text-[#cce0f0]">
-            Central Monitoring & Officer Dispatch Console • Government of India
-          </p>
+        {/* CENTER: e-माप Branding */}
+        <div className="flex items-center justify-center flex-1">
+          <span className="text-[#eb5405] text-[32px] md:text-[38px] font-bold leading-none">e-</span>
+          <span className="text-[26px] md:text-[32px] font-bold ml-0.5 text-white">माप</span>
         </div>
 
-        <div className="ml-auto flex items-center gap-4">
-          <button
-            onClick={() => setActiveTab("applications")}
-            className="hidden sm:flex items-center gap-1.5 bg-[#eb5405] hover:bg-[#d44700] text-white text-[12px] font-semibold px-3 py-1.5 rounded shadow transition"
-          >
-            <ClipboardList size={15} />
-            <span>Assign Applications ({submittedCount})</span>
-          </button>
+        {/* RIGHT: Profile */}
+        <div className="flex items-center justify-end gap-4 flex-1">
+          {submittedCount > 0 && (
+            <button
+              onClick={() => setActiveTab("applications")}
+              className="hidden md:flex items-center gap-1.5 bg-[#eb5405] hover:bg-[#d44700] text-white text-[12px] font-semibold px-4 py-1.5 rounded transition"
+            >
+              <ClipboardList size={15} />
+              <span>Assign Apps ({submittedCount})</span>
+            </button>
+          )}
 
           <button
             onClick={onLogout}
-            className="flex items-center gap-3 hover:opacity-90 transition text-left cursor-pointer"
+            className="flex items-center gap-2.5 hover:bg-white/10 p-1.5 rounded transition text-left cursor-pointer border border-transparent hover:border-white/20"
             title="Click to logout"
           >
-            <div className="w-[40px] h-[40px] rounded-full border border-amber-300 bg-[#eb5405] flex items-center justify-center font-bold text-[13px]">
+            <div className="w-[36px] h-[36px] rounded-full bg-white/20 flex items-center justify-center font-bold text-[13px] border border-white/30 text-white">
               AD
             </div>
-            <div>
-              <p className="text-[13px] font-semibold leading-tight">
+            <div className="hidden sm:block">
+              <p className="text-[13px] font-semibold leading-tight text-white flex items-center gap-1">
                 Anjali Desai
-                <span className="text-[10px] text-amber-300 ml-1.5">(Logout)</span>
+                <ChevronDown size={14} className="text-white/70" />
               </p>
-              <p className="text-[10px] text-[#c7deed]">State Controller</p>
+              <p className="text-[10px] text-[#c7deed] truncate max-w-[140px]">
+                State Controller
+              </p>
             </div>
           </button>
         </div>
