@@ -1,523 +1,773 @@
-import React from "react";
+import React, { useState } from "react";
+import { useData } from "./DataContext";
 import {
   LayoutDashboard,
   ClipboardList,
-  CalendarDays,
-  ShieldCheck,
-  UserRound,
-  Clock3,
+  Calendar,
   CheckCircle2,
-  FileCheck2,
+  Clock,
+  AlertTriangle,
   ArrowRight,
-  Plus,
+  ShieldCheck,
+  Search,
+  X,
+  FileCheck2,
+  Filter,
+  Check,
+  Building,
+  MapPin,
+  CalendarDays,
+  FileText,
 } from "lucide-react";
 
-const applications = [
-  {
-    id: "APP-2025-0098",
-    instrument: "Weighing Scale (100kg)",
-    owner: "Sharma Traders",
-    location: "On-site",
-    status: "Assigned",
-  },
-  {
-    id: "APP-2025-0097",
-    instrument: "Pressure Gauge",
-    owner: "Apex Industries",
-    location: "Lab",
-    status: "Scheduled",
-  },
-  {
-    id: "APP-2025-0096",
-    instrument: "Fuel Dispenser",
-    owner: "City Fuels",
-    location: "On-site",
-    status: "In Progress",
-  },
-];
+export default function OfficerDashboard({ onLogout }) {
+  const {
+    currentUser,
+    applications,
+    instruments,
+    certificates,
+    scheduleInspection,
+    completeVerification,
+  } = useData();
 
-const schedules = [
-  {
-    day: "Today",
-    time: "10:00 AM",
-    application: "APP-2025-0096",
-    instrument: "Fuel Dispenser",
-    owner: "City Fuels",
-    type: "On-site",
-  },
-  {
-    day: "Today",
-    time: "02:30 PM",
-    application: "APP-2025-0097",
-    instrument: "Pressure Gauge",
-    owner: "Apex Industries",
-    type: "Lab",
-  },
-  {
-    day: "23 Sep",
-    time: "11:00 AM",
-    application: "APP-2025-0095",
-    instrument: "Balance (5kg)",
-    owner: "Gupta Stores",
-    type: "Lab",
-  },
-  {
-    day: "24 Sep",
-    time: "09:30 AM",
-    application: "APP-2025-0094",
-    instrument: "Flow Meter",
-    owner: "Metro Pumps",
-    type: "On-site",
-  },
-  {
-    day: "25 Sep",
-    time: "01:00 PM",
-    application: "APP-2025-0093",
-    instrument: "Electrical Meter",
-    owner: "Nexon Energy",
-    type: "Lab",
-  },
-];
+  const [activeTab, setActiveTab] = useState("queue"); // queue | diary | history
+  const [filterMode, setFilterMode] = useState("my"); // 'my' = my assigned, 'all' = all LMO applications
 
-const stats = [
-  {
-    title: "Assigned",
-    value: "18",
-    subtitle: "Active workload",
-    icon: ClipboardList,
-    iconBg: "bg-[#1470c2]",
-    border: "border-[#0a4a73]",
-    titleColor: "text-[#0a4a73]",
-    subColor: "text-[#0a4a73]",
-  },
-  {
-    title: "Pending Verification",
-    value: "6",
-    subtitle: "Needs action",
-    icon: Clock3,
-    iconBg: "bg-[#fa9e14]",
-    border: "border-[#eb5405]",
-    titleColor: "text-[#eb5405]",
-    subColor: "text-[#eb5405]",
-  },
-  {
-    title: "Completed Today",
-    value: "4",
-    subtitle: "↑ 1 vs yesterday",
-    icon: CheckCircle2,
-    iconBg: "bg-[#17a33b]",
-    border: "border-[#17a33b]",
-    titleColor: "text-[#17a33b]",
-    subColor: "text-[#17a33b]",
-  },
-  {
-    title: "Completed This Week",
-    value: "21",
-    subtitle: "This week",
-    icon: CheckCircle2,
-    iconBg: "bg-[#6e47ba]",
-    border: "border-[#6e47ba]",
-    titleColor: "text-[#6e47ba]",
-    subColor: "text-[#6e47ba]",
-  },
-  {
-    title: "Certificates Issued",
-    value: "16",
-    subtitle: "This week",
-    icon: ShieldCheck,
-    iconBg: "bg-[#0a4a73]",
-    border: "border-[#0a4a73]",
-    titleColor: "text-[#0a4a73]",
-    subColor: "text-[#0a4a73]",
-  },
-];
+  // Modals state
+  const [scheduleModalApp, setScheduleModalApp] = useState(null);
+  const [verifyModalApp, setVerifyModalApp] = useState(null);
+  const [toastMessage, setToastMessage] = useState("");
 
-function SidebarItem({ icon: Icon, label, active }) {
-  return (
-    <button
-      className={`w-full h-[50px] flex items-center gap-4 px-5 rounded-lg text-left transition ${
-        active
-          ? "bg-[#0a4a73] text-white"
-          : "text-white hover:bg-[#0a4a73]/60"
-      }`}
-    >
-      <Icon size={20} strokeWidth={1.8} />
-
-      <span
-        className={`text-[14px] ${
-          active ? "font-semibold" : "font-normal"
-        }`}
-      >
-        {label}
-      </span>
-    </button>
+  // Schedule form state
+  const [scheduleDate, setScheduleDate] = useState(
+    new Date(Date.now() + 86400000).toISOString().split("T")[0]
   );
-}
+  const [scheduleTime, setScheduleTime] = useState("11:00 AM");
 
-function StatCard({
-  title,
-  value,
-  subtitle,
-  icon: Icon,
-  iconBg,
-  border,
-  titleColor,
-  subColor,
-}) {
-  return (
-    <div
-      className={`h-[128px] bg-white border ${border} rounded-[9px] p-[15px] flex items-start gap-3`}
-    >
-      <div
-        className={`${iconBg} w-[56px] h-[56px] rounded-full flex items-center justify-center flex-shrink-0`}
-      >
-        <Icon size={24} className="text-white" strokeWidth={1.7} />
-      </div>
+  // Verification Form state
+  const [verificationForm, setVerificationForm] = useState({
+    result: "pass",
+    readings: "Standard weight: 50kg, Measured: 50.01kg",
+    errorFound: "+0.01kg",
+    toleranceWithin: true,
+    remarks: "Within maximum permissible error (MPE). Tamper-evident lead seal affixed.",
+    sealNumber: `SEAL-${currentUser?.state?.slice(0, 3)?.toUpperCase() || "GOI"}-${Math.floor(1000 + Math.random() * 9000)}`,
+  });
 
-      <div className="pt-[1px] min-w-0">
-        <p className={`${titleColor} text-[13px] font-semibold whitespace-nowrap`}>
-          {title}
-        </p>
+  const triggerToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(""), 4000);
+  };
 
-        <p className="text-[#12263b] text-[26px] font-bold leading-8 mt-1">
-          {value}
-        </p>
+  // Filter applications for this LMO
+  const myApplications = applications.filter((app) => {
+    if (filterMode === "my") {
+      return (
+        app.assignedLmoId === currentUser?.id ||
+        app.assignedLmoName === currentUser?.name ||
+        (!app.assignedLmoId && app.district === currentUser?.district)
+      );
+    }
+    return true; // Show all assigned
+  });
 
-        <p className={`${subColor} text-[11px] mt-1`}>
-          {subtitle}
-        </p>
-      </div>
-    </div>
-  );
-}
+  // Metric counts
+  const totalAssigned = myApplications.length;
+  const pendingScheduling = myApplications.filter((a) => a.status === "assigned").length;
+  const scheduledInspections = myApplications.filter((a) => a.status === "scheduled").length;
+  const completedInspections = myApplications.filter((a) => a.status === "completed").length;
 
-function ActionCard({
-  title,
-  subtitle,
-  icon: Icon,
-  bg,
-  textColor = "text-white",
-  width = "w-[240px]",
-}) {
-  return (
-    <button
-      className={`${bg} ${textColor} ${width} h-[82px] rounded-lg px-[18px] flex items-center justify-between hover:brightness-95 transition`}
-    >
-      <div className="flex items-center gap-3 text-left">
-        <Icon size={22} strokeWidth={1.7} />
+  // Handle schedule submit
+  const handleScheduleSubmit = (e) => {
+    e.preventDefault();
+    if (!scheduleModalApp) return;
 
-        <div>
-          <p className="text-[11px] font-semibold">
-            {title}
-          </p>
+    scheduleInspection(scheduleModalApp.id, scheduleDate, scheduleTime);
+    setScheduleModalApp(null);
+    triggerToast(`Inspection for ${scheduleModalApp.id} scheduled on ${scheduleDate} at ${scheduleTime}!`);
+  };
 
-          <p className="text-[9px] opacity-90 mt-1">
-            {subtitle}
-          </p>
-        </div>
-      </div>
+  // Handle verification submit
+  const handleVerifySubmit = (e) => {
+    e.preventDefault();
+    if (!verifyModalApp) return;
 
-      <ArrowRight size={19} />
-    </button>
-  );
-}
+    completeVerification(verifyModalApp.id, verificationForm);
+    const wasPass = verificationForm.result === "pass";
+    setVerifyModalApp(null);
+    triggerToast(
+      wasPass
+        ? `✓ Verification PASSED! Certificate generated and seal ${verificationForm.sealNumber} recorded.`
+        : `✗ Verification FAILED. Rejection recorded for ${verifyModalApp.id}.`
+    );
+  };
 
-function StatusText({ status }) {
-  const classes = {
-    Assigned: "text-[#0a4a73]",
-    Scheduled: "text-[#e59a00]",
-    "In Progress": "text-[#6e47ba]",
+  const openVerifyModal = (app) => {
+    setVerifyModalApp(app);
+    // Pre-fill sensible default readings based on instrument
+    const isWeighing = app.instrumentName?.toLowerCase().includes("scale") || app.instrumentName?.toLowerCase().includes("weigh");
+    const isPump = app.instrumentName?.toLowerCase().includes("pump") || app.instrumentName?.toLowerCase().includes("fuel");
+
+    setVerificationForm({
+      result: "pass",
+      readings: isPump
+        ? "Standard 5L test measure delivered: 5005 ml (Error: +5 ml)"
+        : isWeighing
+        ? "Standard test weights applied (100kg): Measured 100.02kg"
+        : "Standard measure comparison completed",
+      errorFound: isPump ? "+5 ml" : "+0.02 kg",
+      toleranceWithin: true,
+      remarks: "Equipment complies with Legal Metrology (General) Rules 2011 specifications.",
+      sealNumber: `SEAL-${currentUser?.state?.slice(0, 3)?.toUpperCase() || "GOI"}-${Math.floor(1000 + Math.random() * 9000)}`,
+    });
   };
 
   return (
-    <span className={`font-medium ${classes[status] || "text-gray-600"}`}>
-      {status}
-    </span>
-  );
-}
+    <div className="min-h-screen bg-[#e9eef2] font-sans text-[#12263b] flex flex-col">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-12 right-6 z-50 bg-[#053b5c] text-white px-5 py-3 rounded-lg shadow-xl border-l-4 border-[#159447] flex items-center gap-3 animate-bounce">
+          <CheckCircle2 size={18} className="text-emerald-400" />
+          <span className="text-[13px] font-medium">{toastMessage}</span>
+        </div>
+      )}
 
-function ScheduleItem({ item }) {
-  return (
-    <div className="flex gap-4">
-      <div className="w-[64px] h-[48px] rounded-[7px] border border-[#d6e3ed] bg-[#f0f7ff] flex flex-col items-center justify-center flex-shrink-0">
-        <p className="text-[10px] font-semibold text-[#0a4a73]">
-          {item.day}
-        </p>
+      {/* ================= HEADER ================= */}
+      <header className="h-[76px] bg-[#053b5c] border-b-[3px] border-[#159447] flex items-center px-4 md:px-8 text-white shadow-md">
+        <div className="flex items-center gap-2 mr-6">
+          <span className="text-[#eb5405] text-[34px] font-bold leading-none">e</span>
+          <span className="text-[28px] font-bold ml-0.5">माप</span>
+          <span className="text-[10px] bg-[#159447] text-white font-bold px-2 py-0.5 rounded font-mono ml-2 tracking-wider">
+            OFFICER CONSOLE
+          </span>
+        </div>
 
-        <p className="text-[10px] font-semibold text-[#5c738c] mt-1">
-          {item.time}
-        </p>
-      </div>
+        <div className="hidden md:block">
+          <h1 className="text-[17px] font-semibold">Legal Metrology Inspection & Stamping System</h1>
+          <p className="text-[11px] text-[#cce0f0]">
+            Inspector Field Workbench • {currentUser?.district} Division ({currentUser?.state})
+          </p>
+        </div>
 
-      <div className="pt-[1px]">
-        <p className="text-[11px] font-semibold text-[#12263b]">
-          {item.application}
-          <span className="mx-1">•</span>
-          {item.instrument}
-        </p>
+        <div className="ml-auto flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-2 bg-[#09476f] px-3 py-1.5 rounded text-[11px] border border-[#1b6291]">
+            <ShieldCheck size={14} className="text-emerald-400" />
+            <span>Authorized Inspector: {currentUser?.name}</span>
+          </div>
 
-        <p className="text-[10px] text-[#5c738c] mt-2">
-          {item.owner}
-          <span className="mx-1">•</span>
-          {item.type}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-export default function OfficerDashboard({ onLogout }) {
-  return (
-    <div className="min-h-screen bg-[#e9e9e9] font-sans text-[#12263b]">
-      {/* Desktop frame */}
-      <div className="w-full min-h-screen flex justify-center">
-        <div className="w-full max-w-[1440px] min-h-screen bg-[#f6f9fb] relative">
-          
-          {/* ================= HEADER ================= */}
-          <header className="h-[85px] bg-[#053b5c] border-b-[3px] border-[#eb5405] flex items-center px-[58px] text-white">
-            {/* logo */}
-            <div className="flex items-center w-[160px]">
-              <span className="text-[#eb5405] text-[36px] font-bold leading-none">
-                e
-              </span>
-
-              <span className="text-[30px] font-bold ml-1">
-                माप
-              </span>
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-3 hover:opacity-90 transition text-left cursor-pointer"
+            title="Click to logout"
+          >
+            <div className="w-[40px] h-[40px] rounded-full border border-emerald-400 bg-[#159447] flex items-center justify-center font-bold text-[13px]">
+              {currentUser?.avatar || "LM"}
             </div>
-
-            {/* title */}
             <div>
-              <h1 className="text-[20px] font-semibold">
-                Legal Metrology Verification Platform
-              </h1>
+              <p className="text-[13px] font-semibold leading-tight">
+                {currentUser?.name}
+                <span className="text-[10px] text-amber-300 ml-1.5">(Logout)</span>
+              </p>
+              <p className="text-[10px] text-[#c7deed]">{currentUser?.designation || "LMO"}</p>
+            </div>
+          </button>
+        </div>
+      </header>
 
-              <p className="text-[13px] text-[#cce0f0] mt-1">
-                Digital verification • Transparent certificate services
+      {/* ================= BODY ================= */}
+      <div className="flex flex-1">
+        {/* ================= SIDEBAR ================= */}
+        <aside className="w-[210px] bg-white border-r border-[#dce4e9] text-[#182b3d] flex flex-col flex-shrink-0 p-3 shadow-sm">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-[#6b8296] px-3 py-2">
+            Field Menu
+          </div>
+
+          <nav className="space-y-1">
+            <button
+              onClick={() => setActiveTab("queue")}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-[13px] font-medium transition ${
+                activeTab === "queue"
+                  ? "bg-[#f0f6fa] text-[#084a78] font-semibold border-l-4 border-[#159447]"
+                  : "text-[#334e68] hover:bg-[#f8fafc]"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <ClipboardList size={16} />
+                <span>Verification Queue</span>
+              </div>
+              {pendingScheduling + scheduledInspections > 0 && (
+                <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-bold">
+                  {pendingScheduling + scheduledInspections}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab("diary")}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-[13px] font-medium transition ${
+                activeTab === "diary"
+                  ? "bg-[#f0f6fa] text-[#084a78] font-semibold border-l-4 border-[#159447]"
+                  : "text-[#334e68] hover:bg-[#f8fafc]"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <CalendarDays size={16} />
+                <span>Inspection Diary</span>
+              </div>
+              <span className="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.5 rounded font-mono">
+                {scheduledInspections}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("history")}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-[13px] font-medium transition ${
+                activeTab === "history"
+                  ? "bg-[#f0f6fa] text-[#084a78] font-semibold border-l-4 border-[#159447]"
+                  : "text-[#334e68] hover:bg-[#f8fafc]"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <CheckCircle2 size={16} />
+                <span>Completed Audits</span>
+              </div>
+              <span className="bg-[#e4eff7] text-[#084a78] text-[10px] px-1.5 py-0.5 rounded font-mono">
+                {completedInspections}
+              </span>
+            </button>
+          </nav>
+
+          <div className="mt-auto p-3 bg-[#f8fafc] rounded-lg border border-[#e4eff7] text-[11px] text-[#4b6b85]">
+            <p className="font-semibold text-[#063653] mb-1">Testing Kit Ready</p>
+            <p className="text-[10px] text-[#6b8296]">Calibrated Test Weights: F1 Class Certified</p>
+            <p className="text-[10px] text-[#6b8296] mt-0.5">Tamper Seals Issued: 25</p>
+          </div>
+        </aside>
+
+        {/* ================= MAIN CONTENT ================= */}
+        <main className="flex-1 p-5 overflow-y-auto max-w-7xl">
+          {/* Header row with stats */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <div>
+              <h2 className="text-[22px] font-bold text-[#063653]">
+                {activeTab === "queue" && "Inspection Dispatch & Action Queue"}
+                {activeTab === "diary" && "Scheduled Inspection Calendar & Visits"}
+                {activeTab === "history" && "Verification Stamping & Completed Records"}
+              </h2>
+              <p className="text-[12px] text-[#55697d]">
+                Officer: <span className="font-semibold text-[#182b3d]">{currentUser?.name}</span> • Jurisdiction: {currentUser?.district}, {currentUser?.state}
               </p>
             </div>
 
-            {/* right side */}
-            <div className="ml-auto flex items-center gap-6">
-              <div className="text-[14px] font-semibold">
-                English&nbsp;&nbsp;|&nbsp;&nbsp;हिन्दी
-              </div>
-
-              <button 
-                onClick={onLogout}
-                className="flex items-center gap-3 hover:opacity-80 transition cursor-pointer bg-transparent border-0 text-left text-white"
-                title="Click to logout"
+            {/* Filter Toggle */}
+            <div className="flex items-center gap-2 bg-white border border-[#cbe0ee] p-1 rounded-lg text-[12px]">
+              <button
+                onClick={() => setFilterMode("my")}
+                className={`px-3 py-1 rounded font-semibold transition ${
+                  filterMode === "my" ? "bg-[#053b5c] text-white" : "text-gray-600 hover:bg-gray-100"
+                }`}
               >
-                <div className="w-[46px] h-[46px] rounded-full border border-[#bfd6e5] bg-[#0a4a73] flex items-center justify-center">
-                  <span className="text-[14px] font-semibold">
-                    LM
-                  </span>
-                </div>
-
-                <div>
-                  <p className="text-[14px] font-semibold flex items-center gap-2">
-                    Rajesh Kumar <span className="text-[11px] text-[#eb5405] font-normal">(Logout)</span>
-                  </p>
-
-                  <p className="text-[10px] text-[#c7deed]">
-                    Legal Metrology Officer
-                  </p>
-                </div>
+                My Assigned ({myApplications.length})
+              </button>
+              <button
+                onClick={() => setFilterMode("all")}
+                className={`px-3 py-1 rounded font-semibold transition ${
+                  filterMode === "all" ? "bg-[#053b5c] text-white" : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                All Applications ({applications.length})
               </button>
             </div>
-          </header>
+          </div>
 
-          <div className="flex">
-            {/* ================= SIDEBAR ================= */}
-            <aside className="w-[230px] min-h-[calc(100vh-85px)] bg-[#053b5c] px-2 pt-[23px] flex flex-col flex-shrink-0">
-              <nav className="space-y-[10px]">
-                <SidebarItem
-                  active
-                  icon={LayoutDashboard}
-                  label="Dashboard"
-                />
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-5">
+            <div className="bg-white border border-[#cbe0ee] rounded-lg p-3.5 shadow-xs">
+              <span className="text-[11px] font-semibold uppercase text-gray-500 block">Total Workload</span>
+              <span className="text-[24px] font-bold text-[#063653] block mt-0.5">{totalAssigned}</span>
+              <span className="text-[10px] text-gray-400">Applications in queue</span>
+            </div>
 
-                <SidebarItem
-                  icon={ClipboardList}
-                  label="Assigned Applications"
-                />
+            <div className="bg-white border border-[#cbe0ee] rounded-lg p-3.5 shadow-xs">
+              <span className="text-[11px] font-semibold uppercase text-amber-700 block">Needs Scheduling</span>
+              <span className="text-[24px] font-bold text-amber-600 block mt-0.5">{pendingScheduling}</span>
+              <span className="text-[10px] text-amber-700">Awaiting inspection date</span>
+            </div>
 
-                <SidebarItem
-                  icon={CalendarDays}
-                  label="My Schedule"
-                />
+            <div className="bg-white border border-[#cbe0ee] rounded-lg p-3.5 shadow-xs">
+              <span className="text-[11px] font-semibold uppercase text-indigo-700 block">Scheduled Visits</span>
+              <span className="text-[24px] font-bold text-indigo-700 block mt-0.5">{scheduledInspections}</span>
+              <span className="text-[10px] text-indigo-600">Ready for verification</span>
+            </div>
 
-                <SidebarItem
-                  icon={ShieldCheck}
-                  label="Issued Certificates"
-                />
+            <div className="bg-white border border-[#cbe0ee] rounded-lg p-3.5 shadow-xs">
+              <span className="text-[11px] font-semibold uppercase text-emerald-700 block">Stamped & Verified</span>
+              <span className="text-[24px] font-bold text-emerald-700 block mt-0.5">{completedInspections}</span>
+              <span className="text-[10px] text-emerald-600">Certificates issued</span>
+            </div>
+          </div>
 
-                <SidebarItem
-                  icon={UserRound}
-                  label="Profile"
-                />
-              </nav>
-
-              <div className="mt-auto mb-7 px-2 text-[11px] text-[#c7deed] leading-4">
-                ◊ Secure • Accessible • Citizen
-                <br />
-                focused
-              </div>
-            </aside>
-
-            {/* ================= CONTENT ================= */}
-            <main className="bg-white flex-1 min-w-0 p-[26px]">
-              
-              {/* Welcome */}
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-[29px] leading-9 font-bold">
-                    Officer Dashboard
-                  </h2>
-
-                  <p className="text-[15px] text-[#5c738c] mt-1">
-                    Review assigned applications, schedule verifications and
-                    record inspection results.
-                  </p>
-                </div>
-
-                <p className="text-[13px] font-semibold pt-1">
-                  Mon, 22 Sep 2025&nbsp;&nbsp; | &nbsp;&nbsp;14:32
+          {/* ================= TAB 1: QUEUE ================= */}
+          {activeTab === "queue" && (
+            <div className="bg-white border border-[#d2e0eb] rounded-lg p-5 shadow-xs">
+              <div className="flex items-center justify-between mb-4 border-b pb-2">
+                <p className="text-[13px] text-gray-600">
+                  Select an application to <strong>Schedule an Inspection Date</strong> or <strong>Conduct Physical Verification</strong>.
                 </p>
+                <span className="text-[11px] font-bold text-[#053b5c]">
+                  {myApplications.length} Total in Queue
+                </span>
               </div>
 
-              {/* ================= STATS ================= */}
-              <div className="flex gap-4 mt-[42px] overflow-hidden">
-                {stats.map((stat) => (
-                  <div key={stat.title} className="min-w-[230px] flex-1">
-                    <StatCard {...stat} />
-                  </div>
-                ))}
-              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-[12px] border-collapse">
+                  <thead>
+                    <tr className="bg-[#f0f5f9] text-[#063653] border-b border-[#cce0ee] text-[11px] uppercase tracking-wider">
+                      <th className="p-3 font-bold">App ID</th>
+                      <th className="p-3 font-bold">Trader / Business</th>
+                      <th className="p-3 font-bold">Instrument Description</th>
+                      <th className="p-3 font-bold">Location & District</th>
+                      <th className="p-3 font-bold">Scheduled Time</th>
+                      <th className="p-3 font-bold">Current Status</th>
+                      <th className="p-3 font-bold text-right">Field Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {myApplications.map((app) => (
+                      <tr key={app.id} className="hover:bg-[#f8fbfd] transition">
+                        <td className="p-3 font-bold font-mono text-[#084a78]">{app.id}</td>
+                        <td className="p-3">
+                          <span className="font-semibold text-gray-900 block">{app.ownerName}</span>
+                          <span className="text-[10px] text-gray-500">{app.ownerOrg}</span>
+                        </td>
+                        <td className="p-3 font-medium text-gray-800">{app.instrumentName}</td>
+                        <td className="p-3">
+                          <span className="font-semibold block">{app.district}</span>
+                          <span className="text-[10px] text-gray-500 capitalize">{app.verificationLocation} inspection</span>
+                        </td>
+                        <td className="p-3 text-[11px]">
+                          {app.scheduledDate ? (
+                            <span className="font-semibold text-indigo-700">
+                              {app.scheduledDate} {app.scheduledTime && `• ${app.scheduledTime}`}
+                            </span>
+                          ) : (
+                            <span className="text-amber-700 italic">Not scheduled yet</span>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              app.status === "completed"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : app.status === "scheduled"
+                                ? "bg-indigo-100 text-indigo-800"
+                                : app.status === "assigned"
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-blue-100 text-blue-800"
+                            }`}
+                          >
+                            {app.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {/* Schedule Button */}
+                            {app.status !== "completed" && (
+                              <button
+                                onClick={() => setScheduleModalApp(app)}
+                                className="bg-[#053b5c] hover:bg-[#094c75] text-white px-2.5 py-1 rounded text-[11px] font-semibold transition"
+                                title="Set inspection date and time"
+                              >
+                                {app.scheduledDate ? "Reschedule" : "Schedule"}
+                              </button>
+                            )}
 
-              {/* ================= TABLE + SCHEDULE ================= */}
-              <div className="grid grid-cols-[700px_1fr] gap-6 mt-[18px]">
-                
-                {/* Assigned Applications */}
-                <section className="h-[420px] border border-[#d6e3ed] rounded-[9px] bg-white p-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-[17px] font-semibold">
-                      Assigned Applications
-                    </h3>
-
-                    <button className="text-[12px] text-[#0a6ed1] font-semibold">
-                      View All&nbsp; →
-                    </button>
-                  </div>
-
-                  <table className="w-full mt-6 text-[11px]">
-                    <thead>
-                      <tr className="text-[#264766] font-semibold text-left">
-                        <th className="pb-4">Application ID</th>
-                        <th className="pb-4">Instrument</th>
-                        <th className="pb-4">Owner</th>
-                        <th className="pb-4">Location</th>
-                        <th className="pb-4">Status</th>
+                            {/* Conduct Verification Button */}
+                            {app.status !== "completed" ? (
+                              <button
+                                onClick={() => openVerifyModal(app)}
+                                className="bg-[#159447] hover:bg-[#117a3a] text-white px-3 py-1 rounded text-[11px] font-bold shadow-xs transition flex items-center gap-1"
+                                title="Enter verification test readings and issue seal"
+                              >
+                                <Check size={12} /> Verify
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                ✓ Certified
+                              </span>
+                            )}
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
-                    <tbody>
-                      {applications.map((app) => (
-                        <tr key={app.id}>
-                          <td className="py-4">{app.id}</td>
-                          <td>{app.instrument}</td>
-                          <td>{app.owner}</td>
-                          <td>{app.location}</td>
-                          <td>
-                            <StatusText status={app.status} />
+          {/* ================= TAB 2: DIARY / CALENDAR ================= */}
+          {activeTab === "diary" && (
+            <div className="bg-white border border-[#d2e0eb] rounded-lg p-5 shadow-xs space-y-4">
+              <h4 className="font-bold text-[15px] text-[#063653] flex items-center gap-2">
+                <CalendarDays size={18} /> Field Inspection Diary & Planned Visits
+              </h4>
+
+              <div className="space-y-3">
+                {myApplications.filter((a) => a.scheduledDate).length === 0 ? (
+                  <p className="text-gray-500 text-xs py-8 text-center">
+                    No inspections scheduled yet. Use the "Schedule" button in the queue tab.
+                  </p>
+                ) : (
+                  myApplications
+                    .filter((a) => a.scheduledDate)
+                    .map((app) => (
+                      <div
+                        key={app.id}
+                        className="p-4 rounded-lg border border-[#cbe0ee] bg-[#f9fcff] flex flex-wrap items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-indigo-50 border border-indigo-200 rounded-lg flex flex-col items-center justify-center text-indigo-700">
+                            <span className="text-[9px] uppercase font-bold">DATE</span>
+                            <span className="text-[13px] font-bold leading-none">
+                              {app.scheduledDate.split("-")[2] || "DAY"}
+                            </span>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-[13px] text-[#053b5c]">{app.id}</span>
+                              <span className="text-[11px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-semibold">
+                                {app.scheduledTime || "11:00 AM"}
+                              </span>
+                            </div>
+                            <p className="text-[12px] font-semibold text-gray-800 mt-0.5">{app.instrumentName}</p>
+                            <p className="text-[11px] text-gray-500">
+                              Trader: {app.ownerName} ({app.ownerOrg}) • Location: {app.district} ({app.verificationLocation})
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {app.status !== "completed" ? (
+                            <button
+                              onClick={() => openVerifyModal(app)}
+                              className="bg-[#159447] hover:bg-[#117a3a] text-white px-3 py-1.5 rounded text-[11px] font-bold shadow-xs transition"
+                            >
+                              Conduct Verification Now
+                            </button>
+                          ) : (
+                            <span className="text-emerald-700 font-bold text-[11px]">Completed & Stamped</span>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ================= TAB 3: HISTORY ================= */}
+          {activeTab === "history" && (
+            <div className="bg-white border border-[#d2e0eb] rounded-lg p-5 shadow-xs">
+              <h4 className="font-bold text-[15px] text-[#063653] mb-3 flex items-center gap-2">
+                <CheckCircle2 size={18} /> Verified Equipment & Certificate Issuance Records
+              </h4>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-[12px]">
+                  <thead>
+                    <tr className="bg-[#f0f5f9] text-[#063653] font-bold border-b">
+                      <th className="p-3">App ID</th>
+                      <th className="p-3">Certificate Number</th>
+                      <th className="p-3">Trader</th>
+                      <th className="p-3">Instrument</th>
+                      <th className="p-3">Seal Number</th>
+                      <th className="p-3">Date</th>
+                      <th className="p-3">Result</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {applications
+                      .filter((a) => a.status === "completed")
+                      .map((app) => (
+                        <tr key={app.id} className="hover:bg-gray-50">
+                          <td className="p-3 font-mono font-bold text-[#084a78]">{app.id}</td>
+                          <td className="p-3 font-mono text-emerald-800 font-semibold">
+                            {app.certificateNumber || "LM-2025-XXXX"}
+                          </td>
+                          <td className="p-3 font-medium">{app.ownerName}</td>
+                          <td className="p-3">{app.instrumentName}</td>
+                          <td className="p-3 font-mono text-[11px]">
+                            {app.observations?.sealNumber || "SEAL-OK"}
+                          </td>
+                          <td className="p-3 text-gray-500">{app.verificationDate || app.appliedDate}</td>
+                          <td className="p-3">
+                            <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">
+                              PASS
+                            </span>
                           </td>
                         </tr>
                       ))}
-                    </tbody>
-                  </table>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
 
-                  <p className="text-[11px] text-[#5c738c] mt-[260px]">
-                    Filters: &nbsp;Status • Owner • Instrument • Location Type
-                  </p>
-                </section>
+      {/* ================= MODAL: SCHEDULE INSPECTION ================= */}
+      {scheduleModalApp && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border border-gray-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-[#053b5c] text-white px-5 py-4 flex items-center justify-between border-b-2 border-[#159447]">
+              <div className="flex items-center gap-2">
+                <CalendarDays size={18} className="text-[#159447]" />
+                <h3 className="font-bold text-[15px]">Schedule Field Inspection</h3>
+              </div>
+              <button
+                onClick={() => setScheduleModalApp(null)}
+                className="text-white/80 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-                {/* Upcoming Schedule */}
-                <section className="h-[420px] border border-[#d6e3ed] rounded-[9px] bg-white p-4 overflow-hidden">
-                  <div className="flex justify-between">
-                    <h3 className="text-[17px] font-semibold">
-                      Upcoming Schedule
-                    </h3>
-
-                    <button className="text-[12px] text-[#0a6ed1] font-semibold">
-                      My Schedule&nbsp; →
-                    </button>
-                  </div>
-
-                  <div className="mt-6 space-y-4">
-                    {schedules.map((item, index) => (
-                      <ScheduleItem
-                        key={`${item.application}-${index}`}
-                        item={item}
-                      />
-                    ))}
-                  </div>
-                </section>
+            <form onSubmit={handleScheduleSubmit} className="p-5 space-y-3.5 text-[12px]">
+              <div className="bg-[#f0f6fa] p-3 rounded border border-[#cce0ee]">
+                <p className="font-bold text-[#053b5c]">{scheduleModalApp.id}</p>
+                <p className="text-[11px] text-gray-700 mt-0.5">
+                  <strong>Trader:</strong> {scheduleModalApp.ownerName} ({scheduleModalApp.ownerOrg})
+                </p>
+                <p className="text-[11px] text-gray-700">
+                  <strong>Instrument:</strong> {scheduleModalApp.instrumentName}
+                </p>
+                <p className="text-[11px] text-gray-700">
+                  <strong>Location:</strong> {scheduleModalApp.district} ({scheduleModalApp.verificationLocation})
+                </p>
               </div>
 
-              {/* ================= QUICK ACTIONS ================= */}
-              <section className="border border-[#d6e3ed] rounded-[9px] p-4 mt-[20px]">
-                <h3 className="text-[17px] font-semibold">
-                  Quick Actions
-                </h3>
+              <div>
+                <label className="block font-semibold text-[#182b3d] mb-1">
+                  Proposed Inspection Date
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-[12px]"
+                />
+              </div>
 
-                <p className="text-[11px] text-[#5c738c] mt-1">
-                  Common officer actions
-                </p>
+              <div>
+                <label className="block font-semibold text-[#182b3d] mb-1">
+                  Inspection Time Slot
+                </label>
+                <select
+                  value={scheduleTime}
+                  onChange={(e) => setScheduleTime(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-[12px]"
+                >
+                  <option value="10:00 AM">10:00 AM (Morning Slot)</option>
+                  <option value="11:30 AM">11:30 AM (Late Morning)</option>
+                  <option value="02:00 PM">02:00 PM (Afternoon Slot)</option>
+                  <option value="04:00 PM">04:00 PM (Evening Slot)</option>
+                </select>
+              </div>
 
-                <div className="flex gap-4 mt-4">
-                  <ActionCard
-                    title="Schedule Verification"
-                    subtitle="Set date & time"
-                    icon={CalendarDays}
-                    bg="bg-[#0a4a73]"
-                  />
-
-                  <ActionCard
-                    title="Enter Verification Result"
-                    subtitle="Pass / fail + observations"
-                    icon={CheckCircle2}
-                    bg="bg-[#17a33b]"
-                  />
-
-                  <ActionCard
-                    title="Assigned Applications"
-                    subtitle="Review your workload"
-                    icon={ClipboardList}
-                    bg="bg-[#eb5405]"
-                  />
-
-                  <ActionCard
-                    title="Issued Certificates"
-                    subtitle="View & download PDFs"
-                    icon={ShieldCheck}
-                    bg="bg-[#6e47ba]"
-                    width="w-[204px]"
-                  />
-
-                  <ActionCard
-                    title="Profile"
-                    subtitle="Update your information"
-                    icon={UserRound}
-                    bg="bg-[#eef6fd]"
-                    textColor="text-[#155582]"
-                    width="w-[220px]"
-                  />
-                </div>
-              </section>
-            </main>
+              <div className="pt-2 flex justify-end gap-2 border-t">
+                <button
+                  type="button"
+                  onClick={() => setScheduleModalApp(null)}
+                  className="px-3 py-1.5 text-gray-600 hover:bg-gray-100 rounded text-[12px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-[#159447] hover:bg-[#117a3a] text-white px-4 py-1.5 rounded font-semibold text-[12px] shadow-sm"
+                >
+                  Save Schedule
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* ================= MODAL: CONDUCT VERIFICATION & STAMP ================= */}
+      {verifyModalApp && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full border border-gray-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-[#053b5c] text-white px-5 py-4 flex items-center justify-between border-b-2 border-[#159447]">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={18} className="text-emerald-400" />
+                <h3 className="font-bold text-[15px]">Legal Metrology Verification & Stamping</h3>
+              </div>
+              <button
+                onClick={() => setVerifyModalApp(null)}
+                className="text-white/80 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleVerifySubmit} className="p-5 space-y-3.5 text-[12px]">
+              <div className="bg-[#f0f6fa] p-3 rounded border border-[#cce0ee] flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-[#053b5c]">{verifyModalApp.id}</p>
+                  <p className="text-[11px] text-gray-700">{verifyModalApp.instrumentName}</p>
+                  <p className="text-[10px] text-gray-500">Trader: {verifyModalApp.ownerName}</p>
+                </div>
+                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+                  Ready for Test
+                </span>
+              </div>
+
+              {/* Physical Readings */}
+              <div>
+                <label className="block font-semibold text-[#182b3d] mb-1">
+                  Test Readings / Standard Weights Applied
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={verificationForm.readings}
+                  onChange={(e) =>
+                    setVerificationForm({ ...verificationForm, readings: e.target.value })
+                  }
+                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-[12px]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#182b3d] mb-1">
+                    Observed Error
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={verificationForm.errorFound}
+                    onChange={(e) =>
+                      setVerificationForm({ ...verificationForm, errorFound: e.target.value })
+                    }
+                    className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-[12px]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-[#182b3d] mb-1">
+                    Lead Seal / Tamper Seal No.
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={verificationForm.sealNumber}
+                    onChange={(e) =>
+                      setVerificationForm({ ...verificationForm, sealNumber: e.target.value })
+                    }
+                    className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-[12px] font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Tolerance checkbox */}
+              <div className="flex items-center gap-2 bg-gray-50 p-2.5 rounded border border-gray-200">
+                <input
+                  type="checkbox"
+                  id="tol"
+                  checked={verificationForm.toleranceWithin}
+                  onChange={(e) =>
+                    setVerificationForm({ ...verificationForm, toleranceWithin: e.target.checked })
+                  }
+                  className="w-4 h-4 text-emerald-600 rounded"
+                />
+                <label htmlFor="tol" className="font-semibold text-gray-700 cursor-pointer">
+                  Within Maximum Permissible Error (MPE) as per Schedule IX
+                </label>
+              </div>
+
+              {/* Outcome Selection */}
+              <div>
+                <label className="block font-semibold text-[#182b3d] mb-1">Inspection Outcome</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label
+                    className={`border rounded p-2.5 flex items-center gap-2 cursor-pointer transition ${
+                      verificationForm.result === "pass"
+                        ? "border-emerald-600 bg-emerald-50 text-emerald-900 font-bold"
+                        : "border-gray-200"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="res"
+                      value="pass"
+                      checked={verificationForm.result === "pass"}
+                      onChange={(e) =>
+                        setVerificationForm({ ...verificationForm, result: e.target.value })
+                      }
+                    />
+                    <span>PASS (Issue Certificate)</span>
+                  </label>
+
+                  <label
+                    className={`border rounded p-2.5 flex items-center gap-2 cursor-pointer transition ${
+                      verificationForm.result === "fail"
+                        ? "border-red-600 bg-red-50 text-red-900 font-bold"
+                        : "border-gray-200"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="res"
+                      value="fail"
+                      checked={verificationForm.result === "fail"}
+                      onChange={(e) =>
+                        setVerificationForm({ ...verificationForm, result: e.target.value })
+                      }
+                    />
+                    <span>FAIL (Reject & Notice)</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Remarks */}
+              <div>
+                <label className="block font-semibold text-[#182b3d] mb-1">
+                  Inspector Remarks
+                </label>
+                <textarea
+                  rows={2}
+                  value={verificationForm.remarks}
+                  onChange={(e) =>
+                    setVerificationForm({ ...verificationForm, remarks: e.target.value })
+                  }
+                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-[12px]"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2 border-t">
+                <button
+                  type="button"
+                  onClick={() => setVerifyModalApp(null)}
+                  className="px-3 py-1.5 text-gray-600 hover:bg-gray-100 rounded text-[12px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-[#159447] hover:bg-[#117a3a] text-white px-5 py-1.5 rounded font-bold text-[12px] shadow-sm flex items-center gap-1.5"
+                >
+                  <ShieldCheck size={15} /> Confirm Verification & Stamp
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
